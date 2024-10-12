@@ -1,8 +1,10 @@
+import 'dart:math';
+
 import 'package:bonfire/bonfire.dart';
-import 'package:flutter/material.dart';
+import 'package:pacman/decoration/dot.dart';
+import 'package:pacman/decoration/dot_power.dart';
 import 'package:pacman/enemy/ghost_spritesheet.dart';
 import 'package:pacman/main.dart';
-import 'package:pacman/player/pacman.dart';
 import 'package:pacman/util/game_state.dart';
 import 'package:pacman/util/sounds.dart';
 
@@ -11,10 +13,10 @@ enum GhostType { red, blue, pink, orange }
 enum GhostState { normal, vulnerable, die }
 
 class Ghost extends SimpleEnemy
-    with ObjectCollision, AutomaticRandomMovement, MoveToPositionAlongThePath {
-  static const normalSpeed = 140.0;
+    with BlockMovementCollision, RandomMovement, PathFinding {
+  static const normalSpeed = 100.0;
   static const vulnerableSpeed = 90.0;
-  static const dieSpeed = 240.0;
+  static const dieSpeed = 200.0;
   GhostState state = GhostState.normal;
   final Vector2 _startPositionAfterDie = Vector2(
     Game.tileSize * 9,
@@ -32,20 +34,22 @@ class Ghost extends SimpleEnemy
           animation: GhostSpriteSheet.getByType(type),
           speed: normalSpeed,
         ) {
-    setupCollision(
-      CollisionConfig(
-        collisions: [
-          CollisionArea.rectangle(
-            size: size - Vector2.all(4),
-            align: Vector2.all(2),
-          ),
-        ],
+    setupPathFinding(
+      // pathLineColor: Colors.transparent,
+      showBarriersCalculated: false,
+    );
+  }
+
+  @override
+  Future<void> onLoad() {
+    final s = size * 0.7;
+    add(
+      RectangleHitbox(
+        size: s,
+        position: (size - s) / 2,
       ),
     );
-
-    setupMoveToPositionAlongThePath(
-      pathLineColor: Colors.transparent,
-    );
+    return super.onLoad();
   }
 
   @override
@@ -53,23 +57,16 @@ class Ghost extends SimpleEnemy
     if (enabledBeheavor && !isMovingAlongThePath) {
       seePlayer(
         observed: (player) {
-          bool move = false;
           if (state == GhostState.vulnerable) {
-            move = positionsItselfAndKeepDistance(
+            positionsItselfAndKeepDistance(
               player,
-              positioned: (_) {},
               minDistanceFromPlayer: Game.tileSize * 3,
             );
           } else {
-            move = followComponent(
-              player,
-              dt,
-              closeComponent: (_) {},
+            moveTowardsTarget(
+              target: player,
               margin: -10,
             );
-          }
-          if (!move) {
-            _runRandom(dt);
           }
         },
         radiusVision: Game.tileSize * 2,
@@ -80,12 +77,14 @@ class Ghost extends SimpleEnemy
   }
 
   void _runRandom(double dt) {
+    double randomDistance = Random().nextBool() ? 2.0 : 4.0;
     runRandomMovement(
       dt,
       speed: speed,
-      maxDistance: (Game.tileSize * 4).toInt(),
-      minDistance: (Game.tileSize * 4).toInt(),
+      maxDistance: (Game.tileSize * randomDistance),
+      minDistance: (Game.tileSize * randomDistance),
       timeKeepStopped: 0,
+      directions: RandomMovementDirections.withoutDiagonal,
     );
   }
 
@@ -101,7 +100,7 @@ class Ghost extends SimpleEnemy
     );
 
     speed = dieSpeed;
-    moveToPositionAlongThePath(
+    moveToPositionWithPathFinding(
       _startPositionAfterDie,
       ignoreCollisions: ignoreableCollisions,
       onFinish: _removeEyeAnimation,
@@ -114,55 +113,58 @@ class Ghost extends SimpleEnemy
     return [
       gameRef.player,
       ...gameRef.enemies(),
-    ];
+      ...gameRef.query<Dot>(),
+      ...gameRef.query<DotPower>(),
+    ].map((e) => e!.children.query<ShapeHitbox>().first).toList();
   }
 
   @override
   void onMount() {
-    _gameState = BonfireInjector.instance.get();
+    _gameState = GameState();
     _gameState.listenChangePower(_pacManChangePower);
     _startInitialMovement();
     super.onMount();
   }
 
   void _startInitialMovement({bool withDelay = true}) async {
+    const half = Game.tileSize / 2;
     switch (type) {
       case GhostType.red:
         if (withDelay) {
-          await Future.delayed(const Duration(seconds: 1));
+          await Future.delayed(const Duration(seconds: 1), () {print("red");});
         }
-        moveToPositionAlongThePath(
-          Vector2(Game.tileSize * 4, Game.tileSize * 3),
+        moveToPositionWithPathFinding(
+          Vector2((Game.tileSize * 4) + half, (Game.tileSize * 3) + half),
           ignoreCollisions: ignoreableCollisions,
         );
         enabledBeheavor = true;
         break;
       case GhostType.blue:
         if (withDelay) {
-          await Future.delayed(const Duration(seconds: 6));
+          await Future.delayed(const Duration(seconds: 6), () {print("blue");});
         }
-        moveToPositionAlongThePath(
-          Vector2(Game.tileSize * 14, Game.tileSize * 3),
+        moveToPositionWithPathFinding(
+          Vector2(Game.tileSize * 14 + half, Game.tileSize * 3 + half),
           ignoreCollisions: ignoreableCollisions,
         );
         enabledBeheavor = true;
         break;
       case GhostType.pink:
         if (withDelay) {
-          await Future.delayed(const Duration(seconds: 11));
+          await Future.delayed(const Duration(seconds: 11), () {print("pink");});
         }
-        moveToPositionAlongThePath(
-          Vector2(Game.tileSize * 4, Game.tileSize * 13),
+        moveToPositionWithPathFinding(
+          Vector2(Game.tileSize * 4 + half, Game.tileSize * 13 + half),
           ignoreCollisions: ignoreableCollisions,
         );
         enabledBeheavor = true;
         break;
       case GhostType.orange:
         if (withDelay) {
-          await Future.delayed(const Duration(seconds: 16));
+          await Future.delayed(const Duration(seconds: 16), () {print("orange");});
         }
-        moveToPositionAlongThePath(
-          Vector2(Game.tileSize * 14, Game.tileSize * 13),
+        moveToPositionWithPathFinding(
+          Vector2(Game.tileSize * 14 + half, Game.tileSize * 13 + half),
           ignoreCollisions: ignoreableCollisions,
         );
         enabledBeheavor = true;
@@ -171,23 +173,23 @@ class Ghost extends SimpleEnemy
   }
 
   void _removeEyeAnimation() {
-    state = GhostState.normal;
-    speed = normalSpeed;
-    replaceAnimation(GhostSpriteSheet.getByType(type));
+    replaceAnimation(GhostSpriteSheet.getByType(type), doIdle: false);
     _startInitialMovement(withDelay: false);
     if (_gameState.pacManWithPower) {
       Sounds.playPowerBackgroundSound();
     } else {
       Sounds.stopBackgroundSound();
     }
+    state = GhostState.normal;
+    speed = normalSpeed;
   }
 
   @override
-  bool onCollision(GameComponent component, bool active) {
-    if (component is Ghost || component is PacMan) {
+  bool onBlockMovement(Set<Vector2> intersectionPoints, GameComponent other) {
+    if (other is Dot || other is Ghost || state == GhostState.die) {
       return false;
     }
-    return super.onCollision(component, active);
+    return super.onBlockMovement(intersectionPoints, other);
   }
 
   void _pacManChangePower(bool value) {
@@ -200,11 +202,27 @@ class Ghost extends SimpleEnemy
           idleRight: animation,
           runRight: animation,
         ),
+        doIdle: false,
       );
     } else if (state != GhostState.die) {
       state = GhostState.normal;
       speed = normalSpeed;
-      replaceAnimation(GhostSpriteSheet.getByType(type));
+      replaceAnimation(
+        GhostSpriteSheet.getByType(type),
+        doIdle: false,
+      );
     }
+  }
+
+  @override
+  void stopMove({bool forceIdle = false, bool isX = true, bool isY = true}) {
+    _correctPositionToCenterTile();
+    super.stopMove(forceIdle: forceIdle, isX: isX, isY: isY);
+  }
+
+  void _correctPositionToCenterTile() {
+    int w = (position.x / Game.tileSize).round();
+    int h = (position.y / Game.tileSize).round();
+    position = Vector2(w * Game.tileSize, h * Game.tileSize);
   }
 }

@@ -1,7 +1,7 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:pacman/util/util_spritesheet.dart';
 
-class Dot extends GameDecoration {
+class Dot extends GameDecoration with Sensor {
   bool eated = false;
   Dot({
     required super.position,

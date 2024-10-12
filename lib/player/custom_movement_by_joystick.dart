@@ -1,127 +1,77 @@
 import 'package:bonfire/bonfire.dart';
+import 'package:pacman/decoration/dot.dart';
 import 'package:pacman/enemy/ghost.dart';
 import 'package:pacman/main.dart';
 
 mixin CustomMovementByJoystick on SimplePlayer {
-  JoystickMoveDirectional _runDirection = JoystickMoveDirectional.IDLE;
 
   @override
-  void joystickChangeDirectional(JoystickDirectionalEvent event) {
-    if (isDead) {
+  void onJoystickChangeDirectional(JoystickDirectionalEvent event) {
+    if (event.directional == JoystickMoveDirectional.IDLE) {
       return;
     }
-    if (event.directional != JoystickMoveDirectional.IDLE &&
-        event.directional != _runDirection) {
-      Vector2 direction = Vector2.zero();
-      switch (event.directional) {
-        case JoystickMoveDirectional.MOVE_UP:
-          direction = direction.translate(0, -20);
-          break;
-        case JoystickMoveDirectional.MOVE_UP_LEFT:
-          direction = direction.translate(-20, 0);
-          break;
-        case JoystickMoveDirectional.MOVE_UP_RIGHT:
-          direction = direction.translate(20, 0);
-          break;
-        case JoystickMoveDirectional.MOVE_RIGHT:
-          direction = direction.translate(20, 0);
-          break;
-        case JoystickMoveDirectional.MOVE_DOWN:
-          direction = direction.translate(0, 20);
-          break;
-        case JoystickMoveDirectional.MOVE_DOWN_RIGHT:
-          direction = direction.translate(20, 0);
-          break;
-        case JoystickMoveDirectional.MOVE_DOWN_LEFT:
-          direction = direction.translate(-20, 0);
-          break;
-        case JoystickMoveDirectional.MOVE_LEFT:
-          direction = direction.translate(-20, 0);
-          break;
-        case JoystickMoveDirectional.IDLE:
-          break;
-      }
-
-      if (_canMove(direction)) {
-        _runDirection = event.directional;
-      }
+    if (!_canMove(event.directional)) {
+      return;
     }
-    super.joystickChangeDirectional(event);
+    super.onJoystickChangeDirectional(event);
   }
 
-  @override
-  void update(double dt) {
-    bool move = false;
-    switch (_runDirection) {
+    // @override
+  // void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
+  //   if (other is Tile) {
+  //     _correctPositionToCenterTile();
+  //     idle();
+  //   }
+
+  //   super.onCollision(intersectionPoints, other);
+  // }
+
+  bool _canMove(JoystickMoveDirectional move) {
+    final direction = _getDirectionOfMovement(move);
+
+    final v = gameRef.collisions().where((element) {
+      return element.toAbsoluteRect().overlaps(
+                rectCollision.deflate(8).translate(direction.x, direction.y),
+              ) &&
+          element.parent != this &&
+          element.parent is! Dot &&
+          element.parent is! Ghost;
+    });
+    return v.isEmpty;
+  }
+
+  Vector2 _getDirectionOfMovement(JoystickMoveDirectional move) {
+    Vector2 direction = Vector2.zero();
+    switch (move) {
       case JoystickMoveDirectional.MOVE_UP:
-        move = moveUp(speed);
-        if (!move) {
-          _correctPositionToCenterTile();
-          move = moveUp(speed);
-        }
+        direction = direction.translated(0, -20);
         break;
       case JoystickMoveDirectional.MOVE_UP_LEFT:
-        move = moveLeft(speed);
-        if (!move) {
-          _correctPositionToCenterTile();
-          move = moveLeft(speed);
-        }
+        direction = direction.translated(-20, 0);
         break;
       case JoystickMoveDirectional.MOVE_UP_RIGHT:
-        move = moveRight(speed);
+        direction = direction.translated(20, 0);
         break;
       case JoystickMoveDirectional.MOVE_RIGHT:
-        move = moveRight(speed);
-        if (!move) {
-          _correctPositionToCenterTile();
-          move = moveRight(speed);
-        }
+        direction = direction.translated(20, 0);
         break;
       case JoystickMoveDirectional.MOVE_DOWN:
-        move = moveDown(speed);
-        if (!move) {
-          _correctPositionToCenterTile();
-          move = moveDown(speed);
-        }
+        direction = direction.translated(0, 20);
         break;
       case JoystickMoveDirectional.MOVE_DOWN_RIGHT:
-        move = moveRight(speed);
+        direction = direction.translated(20, 0);
         break;
       case JoystickMoveDirectional.MOVE_DOWN_LEFT:
-        move = moveLeft(speed);
+        direction = direction.translated(-20, 0);
         break;
       case JoystickMoveDirectional.MOVE_LEFT:
-        move = moveLeft(speed);
-        if (!move) {
-          _correctPositionToCenterTile();
-          move = moveLeft(speed);
-        }
+        direction = direction.translated(-20, 0);
         break;
       case JoystickMoveDirectional.IDLE:
-        idle();
         break;
     }
 
-    if (!move) {
-      idle();
-    }
-
-    super.update(dt);
-  }
-
-  bool _canMove(Vector2 direction) {
-    final v = gameRef.visibleCollisions().where((element) {
-      return element.rectCollision.overlaps(
-            (this as ObjectCollision)
-                .rectCollision
-                .deflate(14)
-                .translate(direction.x, direction.y),
-          ) &&
-          element != this &&
-          element is! Ghost;
-    });
-
-    return v.isEmpty;
+    return direction;
   }
 
   void _correctPositionToCenterTile() {
@@ -130,15 +80,15 @@ mixin CustomMovementByJoystick on SimplePlayer {
     position = Vector2(w * Game.tileSize, h * Game.tileSize);
   }
 
-  @override
-  void idle() {
-    _runDirection = JoystickMoveDirectional.IDLE;
-    super.idle();
-  }
+  Direction? _dir;
 
   @override
-  void onMount() {
-    movementByJoystickEnabled = false;
-    super.onMount();
+  void onMove(
+      double speed, Vector2 displacement, Direction direction, double angle) {
+    if (direction != _dir) {
+      _dir = direction;
+      _correctPositionToCenterTile();
+    }
+    super.onMove(speed, displacement, direction, angle);
   }
 }

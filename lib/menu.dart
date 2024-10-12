@@ -6,7 +6,7 @@ import 'package:pacman/enemy/ghost_spritesheet.dart';
 import 'package:pacman/player/pacman_spritesheet.dart';
 
 class MenuPage extends StatefulWidget {
-  const MenuPage({Key? key}) : super(key: key);
+  const MenuPage({super.key});
 
   @override
   State<MenuPage> createState() => _MenuPageState();
@@ -78,11 +78,11 @@ class _MenuPageState extends State<MenuPage> with TickerProviderStateMixin {
                   onPressed: () => Navigator.of(context).pushNamed('/game'),
                   style: ButtonStyle(
                     padding:
-                        MaterialStateProperty.all(const EdgeInsets.all(20)),
-                    overlayColor: MaterialStateProperty.all(
+                        WidgetStateProperty.all(const EdgeInsets.all(20)),
+                    overlayColor: WidgetStateProperty.all(
                       Colors.white.withOpacity(0.2),
                     ),
-                    side: MaterialStateProperty.all(
+                    side: WidgetStateProperty.all(
                       const BorderSide(color: Colors.white),
                     ),
                   ),

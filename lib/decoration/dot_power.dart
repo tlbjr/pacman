@@ -11,16 +11,7 @@ class DotPower extends GameDecoration with Sensor {
   }) : super.withAnimation(
           animation: UtilSpriteSheet.dotPower,
           size: Vector2.all(18),
-        ) {
-    setupSensorArea(
-      areaSensor: [
-        CollisionArea.rectangle(
-          size: Vector2.all(16),
-          align: Vector2.all(2),
-        ),
-      ],
-    );
-  }
+        );
 
   @override
   void onContact(GameComponent component) {
@@ -35,7 +26,7 @@ class DotPower extends GameDecoration with Sensor {
 
   @override
   void onMount() {
-    _gameState = BonfireInjector.instance.get();
+    _gameState = GameState();
     super.onMount();
   }
 }
