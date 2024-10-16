@@ -117,6 +117,7 @@ class PacMan extends SimplePlayer
   @override
   bool onBlockMovement(Set<Vector2> intersectionPoints, GameComponent other) {
     _handleContact(other);
+    print("PacMan onBlockMovement");
     if (other is Dot ||
         other is DotPower ||
         (other is Ghost && other.state != GhostState.normal)) {
@@ -132,6 +133,7 @@ class PacMan extends SimplePlayer
   }
 
   void _handleContact(GameComponent component) {
+    print("PacMan _handleContact");
     if (component is Dot && !component.eated) {
       component.eated = true;
       eatDot();

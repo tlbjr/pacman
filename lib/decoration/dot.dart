@@ -1,4 +1,5 @@
 import 'package:bonfire/bonfire.dart';
+import 'package:pacman/player/pacman.dart';
 import 'package:pacman/util/util_spritesheet.dart';
 
 class Dot extends GameDecoration with Sensor {
@@ -12,5 +13,14 @@ class Dot extends GameDecoration with Sensor {
 
   @override
   int get priority => LayerPriority.MAP + 1;
+
+  @override
+  void onContact(GameComponent component) {
+    if (component is PacMan && !eated) {
+      component.eatDot();
+      eated = true;
+      removeFromParent();
+    }
+  }
 
 }
